@@ -1,0 +1,43 @@
+name: Auto Scrape Steam Emails
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # 每 6 小时运行一次
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330     # 5.5 小时
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scraper (incremental)
+        env:
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+          STEAM_ID: ${{ secrets.STEAM_ID }}
+        run: python steam_curator_tool.py --mode 1
+
+      - name: Commit and push updated CSV
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+          git add steam_emails.csv owned_cache.json delisted_cache.json
+          if git diff --cached --quiet; then
+            echo "No changes."
+          else
+            git commit -m "🤖 Auto update CSV - $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
