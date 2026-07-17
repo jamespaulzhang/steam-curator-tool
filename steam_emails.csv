@@ -1,0 +1,101 @@
+﻿appid,name,email,is_free,is_delisted,is_owned
+10,Counter-Strike,NaN,False,False,True
+20,Team Fortress Classic,NaN,False,False,True
+30,Day of Defeat,NaN,False,False,True
+40,Deathmatch Classic,NaN,False,False,True
+50,Half-Life: Opposing Force,NaN,False,False,True
+60,Ricochet,NaN,False,False,True
+70,Half-Life,NaN,False,False,True
+80,Counter-Strike: Condition Zero,NaN,False,False,True
+130,Half-Life: Blue Shift,NaN,False,False,True
+220,Half-Life 2,NaN,False,False,True
+240,Counter-Strike: Source,NaN,False,False,True
+300,Day of Defeat: Source,NaN,False,False,True
+320,Half-Life 2: Deathmatch,NaN,False,False,True
+360,Half-Life Deathmatch: Source,NaN,False,False,True
+400,Portal,NaN,False,False,True
+440,Team Fortress 2,NaN,True,False,True
+500,Left 4 Dead,NaN,False,False,True
+550,Left 4 Dead 2,NaN,False,False,True
+570,Dota 2,NaN,True,False,True
+620,Portal 2,NaN,False,False,True
+630,Alien Swarm,NaN,True,False,False
+730,Counter-Strike 2,NaN,True,False,True
+1002,Rag Doll Kung Fu,NaN,False,False,False
+1200,Red Orchestra: Ostfront 41-45,NaN,False,False,True
+1250,Killing Floor,NaN,False,False,True
+1300,SiN Episodes: Emergence,NaN,False,False,False
+1313,SiN Gold,support@nightdivestudios.com,False,False,True
+1500,Darwinia,NaN,False,False,True
+1510,Uplink,NaN,False,False,True
+1520,DEFCON,NaN,False,False,True
+1530,Multiwinia,NaN,False,False,True
+1600,Dangerous Waters,NaN,False,False,True
+1610,Space Empires IV Deluxe,NaN,False,False,True
+1620,Jagged Alliance 2 Gold,NaN,False,False,False
+1630,Disciples II: Rise of the Elves ,NaN,False,False,True
+1640,Disciples II: Gallean's Return,NaN,False,False,True
+1670,Iron Warriors: T-72 Tank Command ,NaN,False,False,False
+1690,Space Empires V,NaN,False,False,True
+1700,Arx Fatalis,NaN,False,False,True
+1900,Earth 2160,support@topware.com,False,False,True
+1930,Two Worlds Epic Edition,support@topware.com,False,False,True
+2100,Dark Messiah of Might & Magic,NaN,False,False,True
+2200,Quake III Arena,NaN,False,False,True
+2210,Quake 4,Tech04@bethsoft.com,False,False,True
+2270,Wolfenstein 3D,NaN,False,False,True
+2280,DOOM + DOOM II,NaN,False,False,True
+2310,Quake,NaN,False,False,True
+2320,Quake II,NaN,False,False,True
+2400,The Ship: Murder Party,support@blazinggriffin.com,False,False,True
+2420,The Ship: Single Player,NaN,False,False,True
+2450,Bloody Good Time,NaN,False,False,True
+2500,Shadowgrounds,NaN,False,False,True
+2520,Gumboy - Crazy Adventures™,NaN,False,False,False
+2540,RIP - Trilogy™,NaN,False,False,True
+2590,Alpha Prime,support@bohemia.net,False,False,True
+2600,Vampire: The Masquerade - Bloodlines,NaN,False,False,True
+2610,GUN™,NaN,False,False,False
+2620,Call of Duty® (2003),NaN,False,False,True
+2630,Call of Duty® 2,NaN,False,False,True
+2640,Call of Duty: United Offensive,NaN,False,False,True
+2700,RollerCoaster Tycoon® 3: Platinum,NaN,False,False,True
+2710,Act of War: Direct Action,support@quanticlab.com,False,False,True
+2720,ThreadSpace: Hyperbol,NaN,False,False,True
+2800,X2: The Threat,support@egosoft.com,False,False,True
+2810,X3: Reunion,support@egosoft.com,False,False,False
+2820,X3: Terran Conflict,info@egosoft.com,False,False,False
+2840,X: Beyond the Frontier,support@egosoft.com,False,False,True
+2850,X: Tension,support@egosoft.com,False,False,True
+2870,X Rebirth,info@egosoft.com,False,False,True
+2900,688(I) Hunter/Killer,NaN,False,False,False
+2910,Fleet Command,NaN,False,False,True
+2920,Sub Command,NaN,False,False,True
+2990,FlatOut 2,support@strategyfirst.com,False,False,True
+3010,Xpand Rally,NaN,False,False,True
+3020,Call of Juarez,NaN,False,False,True
+3050,Xpand Rally Xtreme,NaN,False,False,True
+3130,Men of War: Red Tide,support@fulqrumpublishing.com,False,False,True
+3170,King's Bounty: Armored Princess,support@fulqrumpublishing.com,False,False,True
+3230,Genesis Rising,NaN,False,False,True
+3260,Safecracker: The Ultimate Puzzle Adventure,support@handy-games.com,False,False,True
+3270,Painkiller Overdose,NaN,False,False,True
+3300,Bejeweled 2 Deluxe,NaN,False,False,True
+3310,Chuzzle Deluxe,NaN,False,False,True
+3320,Insaniquarium Deluxe,NaN,False,False,True
+3330,Zuma Deluxe,NaN,False,False,True
+3340,AstroPop Deluxe,NaN,False,False,True
+3350,Bejeweled Deluxe,NaN,False,False,True
+3360,Big Money! Deluxe,NaN,False,False,True
+3380,Dynomite Deluxe,NaN,False,False,True
+3390,Feeding Frenzy 2 Deluxe,NaN,False,False,True
+3400,Hammer Heads Deluxe,NaN,False,False,False
+3410,Heavy Weapon Deluxe,NaN,False,False,True
+3420,Iggle Pop Deluxe,NaN,False,False,True
+3430,Pizza Frenzy Deluxe,NaN,False,False,False
+3450,Typer Shark! Deluxe,NaN,False,False,True
+3460,Talismania Deluxe,NaN,False,False,True
+3480,Peggle Deluxe,NaN,False,False,True
+3483,Peggle Extreme,NaN,True,False,False
+3490,Venice Deluxe,NaN,False,False,False
+3500,Mystery P.I.™ - The Lottery Ticket,NaN,False,False,True
