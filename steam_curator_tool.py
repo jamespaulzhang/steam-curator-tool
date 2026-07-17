@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Steam Curator 自动化工具（增强版 + 支持 GitHub Actions）
+Steam Curator 自动化工具（增强版 + 支持 GitHub Actions + 下架列表重试机制）
 - 抓取官方邮箱（Failed/NaN 区分）
 - 判断免费 / 下架 / 拥有
 - 支持断点续传、升序抓取、Failed 重试、状态补全、指定起点
 - 适配 GitHub Actions：环境变量、命令行模式、超时自动保存
+- 下架游戏列表加载增加重试（最多3次）并延长缓存有效期（3天）
 """
 
 import requests
@@ -34,7 +35,7 @@ EMAIL_BODY_TEMPLATE = """Dear Developer/Publisher,
 
 I hope this message finds you well.
 
-I am the administrator of the Steam Curator group “Game Utopia”, which currently has over 13,300 followers and has reviewed more than 1200 games. Our mission is to help players discover their next gaming adventure, focusing on showcasing quality games and sharing unique experiences. Whether you’re a hardcore gamer or a casual enthusiast, you’ll find something meaningful with us.
+I am the administrator of the Steam Curator group “Game Utopia”, which currently has over 13,200 followers and has reviewed more than 1200 games. Our mission is to help players discover their next gaming adventure, focusing on showcasing quality games and sharing unique experiences. Whether you’re a hardcore gamer or a casual enthusiast, you’ll find something meaningful with us.
 
 In Game Utopia, we review games of all types and scales:
 • Hidden Indie Gems: Uncovering creative and brilliant works that deserve more attention;
@@ -83,12 +84,13 @@ STEAM_API_KEY = os.environ.get("STEAM_API_KEY", "578A56730A0159A5AF01CEA6B907590
 STEAM_ID = os.environ.get("STEAM_ID", "76561198368348725")
 OWNED_CACHE_FILE = "owned_cache.json"
 
-# ======== 下架游戏列表 ========
+# ======== 下架游戏列表（增加重试和更长的缓存） ========
 DELISTED_API_URL = "https://steam-tracker.com/api?action=GetAppListV3"
 DELISTED_CACHE_FILE = "delisted_cache.json"
+DELISTED_CACHE_MAX_AGE = 259200    # 缓存有效期：3天（秒）
 
 # ======== 超时控制（仅自动模式生效） ========
-MAX_RUNTIME = 5.5 * 3600   # 5.5 小时，与 workflow 的 timeout-minutes 匹配
+MAX_RUNTIME = 5.5 * 3600   # 5.5 小时，与 workflow 的 timeout 匹配
 
 # ========================= 工具函数 =========================
 def load_games_from_github():
@@ -188,38 +190,51 @@ def get_game_details(appid):
     return None, False
 
 def load_delisted_apps():
-    """加载下架游戏列表，返回 set of appid"""
+    """
+    加载下架游戏列表，返回 set of appid。
+    优先使用缓存（3天内有效），失败时自动重试最多3次。
+    """
+    # 尝试从缓存加载
     if os.path.exists(DELISTED_CACHE_FILE):
         try:
             with open(DELISTED_CACHE_FILE, "r") as f:
                 cache = json.load(f)
-                if time.time() - cache.get("timestamp", 0) < 86400:
+                if time.time() - cache.get("timestamp", 0) < DELISTED_CACHE_MAX_AGE:
                     print(f"从缓存加载下架游戏列表，共 {len(cache['ids'])} 个")
                     return set(cache["ids"])
+                else:
+                    print("下架游戏缓存已过期，重新获取...")
         except:
             pass
 
     print("正在从 steam-tracker 获取下架游戏列表...")
-    try:
-        resp = requests.get(DELISTED_API_URL, timeout=30)
-        if resp.status_code != 200:
-            print("⚠️ 获取失败，下架状态将为 False")
-            return set()
-        data = resp.json()
-        removed = data.get("removed_apps", [])
-        ids = set()
-        for app in removed:
-            if isinstance(app, dict):
-                ids.add(str(app.get("appid")))
+    # 重试最多3次
+    for attempt in range(1, 4):
+        try:
+            resp = requests.get(DELISTED_API_URL, timeout=30)
+            if resp.status_code == 200:
+                data = resp.json()
+                removed = data.get("removed_apps", [])
+                ids = set()
+                for app in removed:
+                    if isinstance(app, dict):
+                        ids.add(str(app.get("appid")))
+                    else:
+                        ids.add(str(app))
+                # 更新缓存
+                with open(DELISTED_CACHE_FILE, "w") as f:
+                    json.dump({"timestamp": time.time(), "ids": list(ids)}, f)
+                print(f"✅ 下架游戏列表已更新，共 {len(ids)} 个")
+                return ids
             else:
-                ids.add(str(app))
-        with open(DELISTED_CACHE_FILE, "w") as f:
-            json.dump({"timestamp": time.time(), "ids": list(ids)}, f)
-        print(f"✅ 下架游戏列表已更新，共 {len(ids)} 个")
-        return ids
-    except Exception as e:
-        print(f"❌ 获取下架列表失败: {e}")
-        return set()
+                print(f"⚠️ 获取失败，状态码 {resp.status_code}，尝试 {attempt}/3")
+        except Exception as e:
+            print(f"❌ 请求异常: {e}，尝试 {attempt}/3")
+        if attempt < 3:
+            time.sleep(10)
+
+    print("⚠️ 多次重试后仍无法获取下架数据，下架状态将全部标记为 False")
+    return set()
 
 def load_owned_apps():
     """加载拥有的游戏 AppID 集合"""
@@ -602,7 +617,6 @@ if __name__ == "__main__":
         elif args.mode == "3":
             option3_retry_failed(auto_mode=True)
         elif args.mode == "5":
-            # 状态补充通常很快，不需要超时控制，但也可传入
             option5_supplement_status()
     else:
         # 本地交互模式
