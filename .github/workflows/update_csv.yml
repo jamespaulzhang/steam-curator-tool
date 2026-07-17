@@ -2,13 +2,13 @@ name: Auto Scrape Steam Emails
 
 on:
   schedule:
-    - cron: '0 */6 * * *'   # 每 6 小时运行一次
+    - cron: '0 0,12 * * *'   # 每天 0 点和 12 点运行两次，避免额度超限
   workflow_dispatch:
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 330     # 5.5 小时
+    # 不设置全局 timeout，改为在脚本前加 timeout 命令
 
     steps:
       - name: Checkout repository
@@ -23,14 +23,16 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run scraper (incremental)
+      - name: Run scraper (with soft timeout)
         env:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
           STEAM_ID: ${{ secrets.STEAM_ID }}
-        run: python steam_curator_tool.py --mode 1
+        run: |
+          timeout 19500 python steam_curator_tool.py --mode 1 || echo "Stopped"
 
       - name: Commit and push updated CSV
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "actions@github.com"
