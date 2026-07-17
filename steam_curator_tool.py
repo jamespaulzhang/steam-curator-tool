@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Steam Curator 自动化工具（增强版 + 支持 GitHub Actions + 下架列表重试机制）
+Steam Curator 自动化工具（完整增强版 + GitHub Actions 兼容）
 - 抓取官方邮箱（Failed/NaN 区分）
 - 判断免费 / 下架 / 拥有
 - 支持断点续传、升序抓取、Failed 重试、状态补全、指定起点
-- 适配 GitHub Actions：环境变量、命令行模式、超时自动保存
-- 下架游戏列表加载增加重试（最多3次）并延长缓存有效期（3天）
+- 适配 GitHub Actions：环境变量、命令行模式、超时控制、信号处理
+- 定期保存 + 原子写入，确保数据不丢失
 """
 
 import requests
@@ -22,6 +22,7 @@ import os
 import json
 import argparse
 import warnings
+import signal
 
 warnings.filterwarnings("ignore", message="urllib3 v2 only supports OpenSSL 1.1.1+")
 
@@ -60,6 +61,8 @@ Discord: https://discordapp.com/users/365125763478847500
 
 Game Utopia curator page: https://store.steampowered.com/curator/45337284/
 
+This is our traffic stats:
+
 My steam profile page: https://steamcommunity.com/id/viestbelle/
 """
 
@@ -91,6 +94,23 @@ DELISTED_CACHE_MAX_AGE = 259200    # 缓存有效期：3天（秒）
 
 # ======== 超时控制（仅自动模式生效） ========
 MAX_RUNTIME = 5.5 * 3600   # 5.5 小时，与 workflow 的 timeout 匹配
+
+# ======== 定期保存间隔（处理多少个游戏后自动保存） ========
+SAVE_INTERVAL = 100
+
+# ======== 全局变量（用于信号处理） ========
+_current_results = None
+_current_auto_mode = False
+
+# ========================= 信号处理 =========================
+def graceful_exit(signum, frame):
+    print("\n⏰ 收到终止信号，正在保存数据...")
+    if _current_results is not None:
+        save_csv_atomic(_current_results)
+        print("数据已保存。")
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, graceful_exit)
 
 # ========================= 工具函数 =========================
 def load_games_from_github():
@@ -194,7 +214,6 @@ def load_delisted_apps():
     加载下架游戏列表，返回 set of appid。
     优先使用缓存（3天内有效），失败时自动重试最多3次。
     """
-    # 尝试从缓存加载
     if os.path.exists(DELISTED_CACHE_FILE):
         try:
             with open(DELISTED_CACHE_FILE, "r") as f:
@@ -208,7 +227,6 @@ def load_delisted_apps():
             pass
 
     print("正在从 steam-tracker 获取下架游戏列表...")
-    # 重试最多3次
     for attempt in range(1, 4):
         try:
             resp = requests.get(DELISTED_API_URL, timeout=30)
@@ -221,7 +239,6 @@ def load_delisted_apps():
                         ids.add(str(app.get("appid")))
                     else:
                         ids.add(str(app))
-                # 更新缓存
                 with open(DELISTED_CACHE_FILE, "w") as f:
                     json.dump({"timestamp": time.time(), "ids": list(ids)}, f)
                 print(f"✅ 下架游戏列表已更新，共 {len(ids)} 个")
@@ -302,27 +319,35 @@ def send_email(to_addr, game_name):
         print(f"  ❌ 发送失败: {e}")
         return False
 
-def save_csv(results):
-    """保存结果到 CSV，按 AppID 排序"""
-    if results:
-        results.sort(key=lambda x: int(x["appid"]))
-        with open(OUTPUT_CSV, "w", newline="", encoding="utf-8-sig") as f:
+def save_csv_atomic(results):
+    """原子化保存 CSV：先写临时文件，再替换原文件，避免写入中断损坏数据"""
+    if not results:
+        return
+    results.sort(key=lambda x: int(x["appid"]))
+    temp_file = OUTPUT_CSV + ".tmp"
+    try:
+        with open(temp_file, "w", newline="", encoding="utf-8-sig") as f:
             writer = csv.DictWriter(f, fieldnames=["appid", "name", "email", "is_free", "is_delisted", "is_owned"])
             writer.writeheader()
             writer.writerows(results)
-        print(f"\n✅ 表格已保存至 {OUTPUT_CSV}，共 {len(results)} 条记录")
-    else:
-        print("没有数据。")
+        os.replace(temp_file, OUTPUT_CSV)   # 原子替换
+        print(f"\n💾 已保存 {len(results)} 条记录到 {OUTPUT_CSV}")
+    except Exception as e:
+        print(f"\n❌ 保存 CSV 失败: {e}")
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
 
 # ==================== 核心抓取流程（可复用） ====================
 def scrape_batch(game_map, existing_results, start_label="", auto_mode=False):
     """
-    抓取 game_map 中所有游戏，合并 existing_results，保存到 CSV。
+    抓取 game_map 中所有游戏，合并 existing_results，定期保存到 CSV。
     game_map: {appid: name} （已按升序排序）
     existing_results: 已有的其他结果（不会被覆盖）
     start_label: 可选的进度前缀
     auto_mode: 是否为 GitHub Actions 自动模式，是则开启超时控制
     """
+    global _current_results, _current_auto_mode
+
     results = list(existing_results)
     sorted_items = sorted(game_map.items(), key=lambda x: int(x[0]))
     total = len(sorted_items)
@@ -343,9 +368,10 @@ def scrape_batch(game_map, existing_results, start_label="", auto_mode=False):
     print("按 Ctrl+C 可安全中断")
 
     start_time = time.time()
+    last_save_count = len(existing_results)
     try:
         for idx, (appid, name) in enumerate(sorted_items, 1):
-            # 超时检查（仅自动模式）
+            # 超时检查（自动模式）
             if auto_mode and (time.time() - start_time > MAX_RUNTIME):
                 print(f"\n⏰ 达到最大运行时间，自动保存并退出。已处理 {idx-1}/{total} 个游戏。")
                 break
@@ -378,12 +404,21 @@ def scrape_batch(game_map, existing_results, start_label="", auto_mode=False):
                 "is_owned": is_owned_str
             })
 
+            # 定期保存（每处理 SAVE_INTERVAL 个游戏后自动保存）
+            if len(results) - last_save_count >= SAVE_INTERVAL:
+                _current_results = results   # 让信号处理函数也能访问
+                save_csv_atomic(results)
+                last_save_count = len(results)
+
             if DELAY_BETWEEN_APPIDS > 0 and idx < total:
                 time.sleep(DELAY_BETWEEN_APPIDS)
+
     except KeyboardInterrupt:
         print("\n⚠️ 用户中断，保存已抓取数据...")
 
-    save_csv(results)
+    # 最终保存
+    _current_results = results
+    save_csv_atomic(results)
     return results
 
 # ========================= 菜单功能 =========================
@@ -578,7 +613,7 @@ def menu():
     """本地交互菜单"""
     while True:
         print("\n" + "="*60)
-        print(" Steam Curator 工具（增强版）")
+        print(" Steam Curator 工具（完整增强版）")
         print("="*60)
         print("1. 生成/续传表格（完整：邮箱+状态）")
         print("2. 发送合作邮件")

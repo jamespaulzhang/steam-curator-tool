@@ -2,13 +2,12 @@ name: Auto Scrape Steam Emails
 
 on:
   schedule:
-    - cron: '0 0,12 * * *'   # 每天 0 点和 12 点运行两次，避免额度超限
+    - cron: '0 0,12 * * *'   # 每天 0 点和 12 点运行两次
   workflow_dispatch:
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    # 不设置全局 timeout，改为在脚本前加 timeout 命令
 
     steps:
       - name: Checkout repository
@@ -29,14 +28,22 @@ jobs:
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
           STEAM_ID: ${{ secrets.STEAM_ID }}
         run: |
-          timeout 19500 python steam_curator_tool.py --mode 1 || echo "Stopped"
+          timeout 20000 python steam_curator_tool.py --mode 1 || echo "Stopped"
 
       - name: Commit and push updated CSV
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "actions@github.com"
-          git add steam_emails.csv owned_cache.json delisted_cache.json
+          # 安全添加文件：只添加存在的文件，避免因缺失导致失败
+          for file in steam_emails.csv owned_cache.json delisted_cache.json; do
+            if [ -f "$file" ]; then
+              git add "$file"
+              echo "Added $file"
+            else
+              echo "$file not found, skipping."
+            fi
+          done
           if git diff --cached --quiet; then
             echo "No changes."
           else
