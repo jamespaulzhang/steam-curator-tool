@@ -52,4 +52,3 @@ jobs:
             git commit -m "🤖 Auto update CSV - $(date -u +'%Y-%m-%d %H:%M UTC')"
             git push
           fi
-EOF
