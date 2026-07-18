@@ -1,5 +1,3 @@
-mkdir -p .github/workflows
-cat > .github/workflows/update_csv.yml << 'EOF'
 name: Auto Scrape Steam Emails
 
 on:
