@@ -93,7 +93,7 @@ DELISTED_CACHE_FILE = "delisted_cache.json"
 DELISTED_CACHE_MAX_AGE = 259200    # 缓存有效期：3天（秒）
 
 # ======== 超时控制（仅自动模式生效） ========
-MAX_RUNTIME = 5.5 * 3600   # 5.5 小时，与 workflow 的 timeout 匹配
+MAX_RUNTIME = 5.9 * 3600   # 5.5 小时，与 workflow 的 timeout 匹配
 
 # ======== 定期保存间隔（处理多少个游戏后自动保存） ========
 SAVE_INTERVAL = 100
